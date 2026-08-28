@@ -11,6 +11,7 @@ export ICON=/usr/share/icons/hicolor/scalable/apps/org.vita3k.vita3k.svg
 export DESKTOP=/usr/share/applications/org.vita3k.vita3k.desktop
 export DEPLOY_OPENGL=1
 export DEPLOY_VULKAN=1
+export DEPLOY_PULSE=1
 
 # Deploy dependencies
 quick-sharun /usr/bin/Vita3K* /usr/share/Vita3K
