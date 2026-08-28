@@ -6,21 +6,49 @@ ARCH=$(uname -m)
 
 echo "Installing package dependencies..."
 echo "---------------------------------------------------------------"
-# pacman -Syu --noconfirm PACKAGESHERE
+pacman -Syu --noconfirm \
+	boost             \
+	clang             \
+	cmake             \
+	lld               \
+	ninja             \
+	openssl           \
+	qt6-base          \
+	qt6-multimedia    \
+	qt6-svg           \
+	qt6-tools         \
+	sdl3              \
+	vulkan-icd-loader \
+	wayland           \
+	libxcursor        \
+	libxext           \
+	libxi             \
+	libxrandr         \
+	libxss            \
+	libxtst
 
 echo "Installing debloated packages..."
 echo "---------------------------------------------------------------"
-get-debloated-pkgs --add-common --prefer-nano
+get-debloated-pkgs --add-common --prefer-nano ! gtk
 
 # Comment this out if you need an AUR package
 #make-aur-package PACKAGENAME
 
 # If the application needs to be manually built that has to be done down here
+echo "Building Vita3K..."
+echo "---------------------------------------------------------------"
+git clone https://github.com/Vita3K/Vita3K.git ./Vita3K && (
+	cd ./Vita3K
 
-# if you also have to make nightly releases check for DEVEL_RELEASE = 1
-#
-# if [ "${DEVEL_RELEASE-}" = 1 ]; then
-# 	nightly build steps
-# else
-# 	regular build steps
-# fi
+	# Vita3K has no versioned stable tags, only a continuous release
+	echo "r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)" > ~/version
+
+	git submodule update --init --recursive
+
+	cmake --preset linux-ninja-clang -B ./build \
+		-W no-author                        \
+		-D CMAKE_INSTALL_PREFIX=/usr        \
+		-D XXH_X86DISPATCH_ALLOW_AVX=ON
+	cmake --build ./build --config Release
+	cmake --install ./build --config Release
+)
