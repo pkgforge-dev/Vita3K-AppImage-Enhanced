@@ -45,9 +45,11 @@ git clone https://github.com/Vita3K/Vita3K.git ./Vita3K && (
 
 	git submodule update --init --recursive
 
-	cmake --preset linux-ninja-clang -B ./build \
-		-W no-author                        \
-		-D CMAKE_INSTALL_PREFIX=/usr        \
+	cmake --preset linux-ninja-clang \
+		-B ./build                   \
+		-W no-author                 \
+		-D CMAKE_BUILD_TYPE=Release  \
+		-D CMAKE_INSTALL_PREFIX=/usr \
 		-D XXH_X86DISPATCH_ALLOW_AVX=ON
 	cmake --build ./build --config Release
 	cmake --install ./build --config Release
