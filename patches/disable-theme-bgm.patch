@@ -1,0 +1,171 @@
+diff --git a/cmake/qt6.cmake b/cmake/qt6.cmake
+index 136fcc1..1a2765c 100644
+--- a/cmake/qt6.cmake
++++ b/cmake/qt6.cmake
+@@ -4,7 +4,7 @@ add_library(vita3k_qt6 INTERFACE)
+
+ set(VITA3K_QT_MIN_VER 6.11.0)
+
+-set(VITA3K_QT_COMPONENTS Core Gui Widgets Network Concurrent Svg Multimedia LinguistTools)
++set(VITA3K_QT_COMPONENTS Core Gui Widgets Network Concurrent Svg LinguistTools)
+ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+ 	list(APPEND VITA3K_QT_COMPONENTS GuiPrivate)
+ endif()
+@@ -39,7 +39,6 @@ target_link_libraries(vita3k_qt6 INTERFACE
+ 	Qt6::Network
+ 	Qt6::Concurrent
+ 	Qt6::Svg
+-	Qt6::Multimedia
+ )
+
+ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND TARGET Qt6::GuiPrivate)
+diff --git a/vita3k/gui-qt/include/gui-qt/theme_manager.h b/vita3k/gui-qt/include/gui-qt/theme_manager.h
+index 096f1fc..f38225c 100644
+--- a/vita3k/gui-qt/include/gui-qt/theme_manager.h
++++ b/vita3k/gui-qt/include/gui-qt/theme_manager.h
+@@ -32,8 +32,6 @@
+ #include <vector>
+
+ class GuiSettings;
+-class QAudioOutput;
+-class QMediaPlayer;
+
+ namespace gui {
+
+@@ -123,11 +121,7 @@ private:
+     QString m_current_theme_name;
+     fs::path m_vita_fs_path;
+     fs::path m_vita_themes_root;
+-    QAudioOutput *m_vita_theme_bgm_audio_output = nullptr;
+-    QMediaPlayer *m_vita_theme_bgm_player = nullptr;
+-    QString m_current_vita_theme_bgm_source_path;
+     std::optional<gui::AppliedThemeState> m_applied_theme_state;
+     mutable std::vector<gui::VitaThemeInfo> m_installed_vita_theme_cache;
+     mutable bool m_vita_theme_cache_loaded = false;
+-    bool m_vita_theme_bgm_blocked = false;
+ };
+diff --git a/vita3k/gui-qt/src/settings_dialog.cpp b/vita3k/gui-qt/src/settings_dialog.cpp
+index eeef2da..c1c043d 100644
+--- a/vita3k/gui-qt/src/settings_dialog.cpp
++++ b/vita3k/gui-qt/src/settings_dialog.cpp
+@@ -193,6 +193,9 @@ SettingsDialog::SettingsDialog(EmuEnvState &emuenv,
+         m_ui->gb_adhoc->setVisible(false);
+     }
+
++    // Theme BGM is disabled in this build; hide its settings section.
++    m_ui->gb_theme_music_section->setVisible(false);
++
+     const int selected_tab = first_visible_category(m_ui->settingsCategory, m_initial_tab);
+     if (selected_tab >= 0) {
+         m_ui->settingsCategory->setCurrentRow(selected_tab);
+diff --git a/vita3k/gui-qt/src/theme_manager.cpp b/vita3k/gui-qt/src/theme_manager.cpp
+index ca15d15..44aebeb 100644
+--- a/vita3k/gui-qt/src/theme_manager.cpp
++++ b/vita3k/gui-qt/src/theme_manager.cpp
+@@ -23,7 +23,6 @@
+ #include <util/log.h>
+
+ #include <QApplication>
+-#include <QAudioOutput>
+ #include <QDir>
+ #include <QDirIterator>
+ #include <QFile>
+@@ -31,7 +30,6 @@
+ #include <QJsonArray>
+ #include <QJsonDocument>
+ #include <QJsonObject>
+-#include <QMediaPlayer>
+ #include <QSet>
+ #include <QStyle>
+ #include <QStyleFactory>
+@@ -45,7 +43,6 @@ namespace {
+ constexpr int default_vita_theme_readability = 55;
+ constexpr bool default_vita_theme_normalize_fonts = true;
+ constexpr int default_vita_theme_cycle_interval_seconds = 15;
+-constexpr int default_theme_bgm_volume = 50;
+
+ const QPalette &fusion_palette() {
+     static const QPalette palette = []() {
+@@ -419,11 +416,7 @@ gui::VitaThemeSelection gui::normalize_vita_theme_selection(
+ ThemeManager::ThemeManager(std::shared_ptr<GuiSettings> gui_settings,
+     QObject *parent)
+     : QObject(parent)
+-    , m_gui_settings(std::move(gui_settings))
+-    , m_vita_theme_bgm_audio_output(new QAudioOutput(this))
+-    , m_vita_theme_bgm_player(new QMediaPlayer(this)) {
+-    m_vita_theme_bgm_player->setAudioOutput(m_vita_theme_bgm_audio_output);
+-    m_vita_theme_bgm_player->setLoops(QMediaPlayer::Infinite);
++    , m_gui_settings(std::move(gui_settings)) {
+ }
+
+ void ThemeManager::set_vita_fs_path(const fs::path &vita_fs_path) {
+@@ -828,66 +821,15 @@ bool ThemeManager::apply_theme_entry(const gui::ThemeEntry &theme, const QString
+ }
+
+ void ThemeManager::refresh_vita_theme_bgm() {
+-    if (!m_vita_theme_bgm_audio_output || !m_vita_theme_bgm_player || m_vita_themes_root.empty()) {
+-        stop_vita_theme_bgm();
+-        return;
+-    }
+-
+-    const bool bgm_enabled = m_gui_settings
+-        ? m_gui_settings->get_value(gui::vt_bgmEnabled).toBool()
+-        : false;
+-    const auto selection = applied_vita_theme_selection();
+-    if (!bgm_enabled || m_vita_theme_bgm_blocked || !selection
+-        || !m_applied_theme_state || !m_applied_theme_state->is_vita_theme) {
+-        stop_vita_theme_bgm();
+-        return;
+-    }
+-
+-    const auto *theme = find_installed_vita_theme(selection->theme_id);
+-    if (!theme || !theme->bgm_path || theme->bgm_path->empty()) {
+-        stop_vita_theme_bgm();
+-        return;
+-    }
+-
+-    const QString source_path = gui::utils::to_qt_path(*theme->bgm_path);
+-    const int volume = std::clamp(
+-        m_gui_settings && m_gui_settings->contains_value(gui::vt_bgmVolume)
+-            ? m_gui_settings->get_value(gui::vt_bgmVolume).toInt()
+-            : default_theme_bgm_volume,
+-        0, 100);
+-    m_vita_theme_bgm_audio_output->setVolume(static_cast<float>(volume) / 100.0f);
+-
+-    if (m_current_vita_theme_bgm_source_path != source_path) {
+-        m_current_vita_theme_bgm_source_path = source_path;
+-        m_vita_theme_bgm_player->stop();
+-        m_vita_theme_bgm_player->setSource(QUrl::fromLocalFile(source_path));
+-    }
+-
+-    if (m_vita_theme_bgm_player->playbackState() != QMediaPlayer::PlayingState) {
+-        LOG_INFO("Starting Vita theme BGM playback from {}", source_path.toUtf8().constData());
+-        m_vita_theme_bgm_player->play();
+-    }
++    // Theme BGM playback is disabled in this build (Qt Multimedia is not linked).
+ }
+
+ void ThemeManager::set_vita_theme_bgm_blocked(const bool blocked) {
+-    if (m_vita_theme_bgm_blocked == blocked)
+-        return;
+-
+-    m_vita_theme_bgm_blocked = blocked;
+-    refresh_vita_theme_bgm();
++    // Theme BGM playback is disabled in this build (Qt Multimedia is not linked).
+ }
+
+ void ThemeManager::stop_vita_theme_bgm() {
+-    if (!m_vita_theme_bgm_player)
+-        return;
+-
+-    if (m_vita_theme_bgm_player->playbackState() != QMediaPlayer::StoppedState)
+-        m_vita_theme_bgm_player->stop();
+-
+-    if (!m_current_vita_theme_bgm_source_path.isEmpty()) {
+-        m_vita_theme_bgm_player->setSource(QUrl());
+-        m_current_vita_theme_bgm_source_path.clear();
+-    }
++    // Theme BGM playback is disabled in this build (Qt Multimedia is not linked).
+ }
+
+ std::optional<QString> ThemeManager::load_stylesheet(const gui::ThemeEntry &theme) const {
