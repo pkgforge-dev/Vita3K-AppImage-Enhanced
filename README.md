@@ -17,9 +17,13 @@
 
 </div>
 
+### Difference from upstream Vita3K
+
+The optional Vita theme background music feature (off by default upstream) is disabled here via [`patches/disable-theme-bgm.patch`](patches/disable-theme-bgm.patch). It was the only user of Qt Multimedia, which despite Vita3K already linking ffmpeg statically Qt Multimeida pulls a second shared FFmpeg into the AppImage just to loop one audio file. Everything else is built unmodified from upstream `master`. This feature is removed here because not only it bloats the AppImage size, having two different ffmpeg versions in the same process namespace is asking for trouble.
+
 ---
 
-AppImage made using [quick-sharun](https://github.com/pkgforge-dev/Anylinux-AppImages/blob/main/useful-tools/quick-sharun.sh), which makes it extremely easy to turn any binary into a portable package reliably without using containers or similar tricks. 
+AppImage made using [quick-sharun](https://github.com/pkgforge-dev/Anylinux-AppImages/blob/main/useful-tools/quick-sharun.sh), which makes it extremely easy to turn any binary into a portable package reliably without using containers or similar tricks.
 
 **This AppImage bundles everything and it should work on any Linux distro, including old and musl-based ones.**
 
