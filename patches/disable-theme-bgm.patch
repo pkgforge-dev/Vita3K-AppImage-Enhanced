@@ -59,34 +59,34 @@ index eeef2da..c1c043d 100644
      if (selected_tab >= 0) {
          m_ui->settingsCategory->setCurrentRow(selected_tab);
 diff --git a/vita3k/gui-qt/src/theme_manager.cpp b/vita3k/gui-qt/src/theme_manager.cpp
-index ca15d15..44aebeb 100644
+index e8d9b4c6..66fab780 100644
 --- a/vita3k/gui-qt/src/theme_manager.cpp
 +++ b/vita3k/gui-qt/src/theme_manager.cpp
-@@ -23,7 +23,6 @@
- #include <util/log.h>
-
+@@ -24,7 +24,6 @@
+ #include <util/string_utils.h>
+ 
  #include <QApplication>
 -#include <QAudioOutput>
  #include <QDir>
  #include <QDirIterator>
  #include <QFile>
-@@ -31,7 +30,6 @@
+@@ -32,7 +31,6 @@
  #include <QJsonArray>
  #include <QJsonDocument>
  #include <QJsonObject>
 -#include <QMediaPlayer>
+ #include <QRegularExpression>
  #include <QSet>
  #include <QStyle>
- #include <QStyleFactory>
-@@ -45,7 +43,6 @@ namespace {
+@@ -48,7 +46,6 @@ namespace {
  constexpr int default_vita_theme_readability = 55;
  constexpr bool default_vita_theme_normalize_fonts = true;
  constexpr int default_vita_theme_cycle_interval_seconds = 15;
 -constexpr int default_theme_bgm_volume = 50;
-
+ 
  const QPalette &fusion_palette() {
      static const QPalette palette = []() {
-@@ -419,11 +416,7 @@ gui::VitaThemeSelection gui::normalize_vita_theme_selection(
+@@ -418,11 +415,7 @@ gui::VitaThemeSelection gui::normalize_vita_theme_selection(
  ThemeManager::ThemeManager(std::shared_ptr<GuiSettings> gui_settings,
      QObject *parent)
      : QObject(parent)
@@ -97,11 +97,11 @@ index ca15d15..44aebeb 100644
 -    m_vita_theme_bgm_player->setLoops(QMediaPlayer::Infinite);
 +    , m_gui_settings(std::move(gui_settings)) {
  }
-
+ 
  void ThemeManager::set_vita_fs_path(const fs::path &vita_fs_path) {
-@@ -828,66 +821,15 @@ bool ThemeManager::apply_theme_entry(const gui::ThemeEntry &theme, const QString
+@@ -893,66 +886,15 @@ bool ThemeManager::apply_theme_entry(const gui::ThemeEntry &theme, const QString
  }
-
+ 
  void ThemeManager::refresh_vita_theme_bgm() {
 -    if (!m_vita_theme_bgm_audio_output || !m_vita_theme_bgm_player || m_vita_themes_root.empty()) {
 -        stop_vita_theme_bgm();
@@ -144,7 +144,7 @@ index ca15d15..44aebeb 100644
 -    }
 +    // Theme BGM playback is disabled in this build (Qt Multimedia is not linked).
  }
-
+ 
  void ThemeManager::set_vita_theme_bgm_blocked(const bool blocked) {
 -    if (m_vita_theme_bgm_blocked == blocked)
 -        return;
@@ -153,7 +153,7 @@ index ca15d15..44aebeb 100644
 -    refresh_vita_theme_bgm();
 +    // Theme BGM playback is disabled in this build (Qt Multimedia is not linked).
  }
-
+ 
  void ThemeManager::stop_vita_theme_bgm() {
 -    if (!m_vita_theme_bgm_player)
 -        return;
@@ -167,5 +167,5 @@ index ca15d15..44aebeb 100644
 -    }
 +    // Theme BGM playback is disabled in this build (Qt Multimedia is not linked).
  }
-
+ 
  std::optional<QString> ThemeManager::load_stylesheet(const gui::ThemeEntry &theme) const {
