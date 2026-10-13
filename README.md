@@ -1,5 +1,7 @@
 <div align="center">
 
+# ⚠️ [Now available directly on Vita3k](https://github.com/Vita3K/Vita3K/pull/4225) ⚠️
+
 # Vita3K-AppImage-Enhanced 🐧
 
 [![GitHub Downloads](https://img.shields.io/github/downloads/pkgforge-dev/Vita3K-AppImage-Enhanced/total?logo=github&label=GitHub%20Downloads)](https://github.com/pkgforge-dev/Vita3K-AppImage-Enhanced/releases/latest)
